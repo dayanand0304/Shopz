@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: Shopzz
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/shopzz_database
+    username: root
+    password:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    open-in-view: false
+
+  security:
+    user:
+      name: admin
+      password: admin123
+
+
+logging:
+  level:
+    org.springframework.data.jdbc: OFF
+
+
+
