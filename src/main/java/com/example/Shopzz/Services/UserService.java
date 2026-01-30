@@ -1,123 +1,98 @@
 package com.example.Shopzz.Services;
 
-import com.example.Shopzz.DTO.LoginResponse;
+import com.example.Shopzz.CustomExceptions.Users.UserEmailAlreadyExistsException;
+import com.example.Shopzz.CustomExceptions.Users.UserNotFoundException;
+import com.example.Shopzz.Enums.Role;
 import com.example.Shopzz.Models.User;
 import com.example.Shopzz.Repositries.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class UserService {
 
-    @Autowired
-    private UserRepository userRepository;
-
+    private final UserRepository userRepository;
 
     //GET ALL USERS
     public List<User> getAllUsers(){
-        List<User> users=userRepository.findAll(Sort.by("username"));
-        users.forEach(u-> u.setPassword(null));
-        return users;
+        return userRepository.findAll(Sort.by("username"));
     }
 
 
     //GET USER BY USER ID
-    public Optional<User> getUserByUserId(Integer userId){
+    public User getUserByUserId(Integer userId){
         return userRepository.findById(userId)
-                .map(u->{
-                    u.setPassword(null);
-                    return u;
-                });
+                .orElseThrow(()-> new UserNotFoundException(userId));
     }
 
     //GET USER BY USERNAME
-    public Optional<User> getUserByUserName(String userName){
-        return userRepository.findByUsername(userName)
-                .map(u -> {
-                    u.setPassword(null);
-                    return u;
-                });
+    public List<User> getUsersByUserName(String userName){
+        List<User> users=userRepository.findByUsername(userName);
+        if(users.isEmpty()){
+            throw new UserNotFoundException(userName);
+        }
+        return users;
     }
 
     //GET USER BY USER EMAIL
-    public Optional<User> getUserByUserEmail(String email){
+    public User getUserByUserEmail(String email){
         return userRepository.findByEmail(email)
-                .map(u -> {
-                    u.setPassword(null);
-                    return u;
-                });
+                .orElseThrow(()->new UserNotFoundException(email));
     }
 
-    private static final PasswordEncoder passwordEncoder=new BCryptPasswordEncoder();
-
-    //REGISTER NEW USER
-    public User userRegister(User user){
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
-        user.setRole("USER");
-        User saved=userRepository.save(user);
-        saved.setPassword(null);
-        return saved;
+    //FIND BY ROLE
+    public List<User> getUsersByRole(Role role){
+        List<User> users=userRepository.findByRole(role);
+        if(users.isEmpty()){
+            throw new UserNotFoundException(role);
+        }
+        return users;
     }
 
-    //REGISTER NEW ADMIN
-    public User adminRegister(User admin){
-        admin.setPassword(passwordEncoder.encode(admin.getPassword()));
-        admin.setRole("ADMIN");
-        User saved= userRepository.save(admin);
-        saved.setPassword(null);
-        return saved;
+    //ADD NEW USER
+    public User addUser(User user){
+        if(userRepository.existsByEmail(user.getEmail())){
+            throw new UserEmailAlreadyExistsException(user.getEmail());
+        }
+        return userRepository.save(user);
     }
 
     //DELETE USER BY USER ID
-    public String deleteUserByUserId(Integer userId){
-        if(userRepository.existsById(userId)){
-            userRepository.deleteById(userId);
-            return "User : "+ userId+" Deleted Successfully";
-        }else{
-            return "There is no User with "+userId;
-        }
+    @Transactional
+    public void deleteUser(Integer userId){
+        User user=userRepository.findById(userId)
+                .orElseThrow(()->new UserNotFoundException(userId));
+
+        userRepository.delete(user);
     }
 
     //UPDATE USER DETAILS BY USER ID
-    public User updateUserByUserId(Integer userId, User updatedUser){
+    @Transactional
+    public User updateUser(Integer userId, User updatedUser){
         return userRepository.findById(userId)
                 .map(existingUser -> {
                     if(updatedUser.getUsername()!=null){
                         existingUser.setUsername(updatedUser.getUsername());
                     }
                     if(updatedUser.getEmail()!=null){
+                        if(userRepository.existsByEmailAndUserId(updatedUser.getEmail(), userId)){
+                            throw new UserEmailAlreadyExistsException(updatedUser.getEmail());
+                        }
                         existingUser.setEmail(updatedUser.getEmail());
                     }
                     if(updatedUser.getPassword()!=null){
-                        existingUser.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
+                        existingUser.setPassword(updatedUser.getPassword());
                     }
                     if(updatedUser.getRole()!=null){
                         existingUser.setRole(updatedUser.getRole());
                     }
-                    User saved=userRepository.save(existingUser);
-                    saved.setPassword(null);
-                    return saved;
+                    return userRepository.save(existingUser);
                 })
-                .orElse(null);
-    }
-
-    // LOGIN BY USERNAME
-    public Optional<LoginResponse> login(String username, String rawPassword) {
-        return userRepository.findByUsername(username)
-                .filter(u -> passwordEncoder.matches(rawPassword, u.getPassword()))
-                .map(u -> new LoginResponse(u.getUserId(), u.getUsername(), u.getEmail(), u.getRole()));
-    }
-
-    // LOGIN BY EMAIL
-    public Optional<LoginResponse> loginByEmail(String email, String rawPassword) {
-        return userRepository.findByEmail(email)
-                .filter(u -> passwordEncoder.matches(rawPassword, u.getPassword()))
-                .map(u -> new LoginResponse(u.getUserId(), u.getUsername(), u.getEmail(), u.getRole()));
+                .orElseThrow(()->new UserNotFoundException(userId));
     }
 }
