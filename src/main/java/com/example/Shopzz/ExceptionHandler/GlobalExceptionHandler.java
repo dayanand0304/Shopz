@@ -1,5 +1,7 @@
 package com.example.Shopzz.ExceptionHandler;
 
+import com.example.Shopzz.CustomExceptions.Category.CategoryAlreadyExistsException;
+import com.example.Shopzz.CustomExceptions.Category.CategoryNotFoundException;
 import com.example.Shopzz.CustomExceptions.Users.UserEmailAlreadyExistsException;
 import com.example.Shopzz.CustomExceptions.Users.UserNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,7 +19,8 @@ public class GlobalExceptionHandler {
 
     //404: NOT FOUND
     @ExceptionHandler({
-            UserNotFoundException.class
+            UserNotFoundException.class,
+            CategoryNotFoundException.class
     })
     public ResponseEntity<ErrorResponse> handleNotFound(RuntimeException ex,
                                                         HttpServletRequest request){
@@ -30,7 +33,8 @@ public class GlobalExceptionHandler {
 
     //409: CONFLICT
     @ExceptionHandler({
-            UserEmailAlreadyExistsException.class
+            UserEmailAlreadyExistsException.class,
+            CategoryAlreadyExistsException.class
     })
     public ResponseEntity<ErrorResponse> handleConflict(RuntimeException ex,
                                                         HttpServletRequest request){
