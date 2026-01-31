@@ -1,39 +1,32 @@
 package com.example.Shopzz.Services;
 
+import com.example.Shopzz.CustomExceptions.CartAndCartItems.CartEmptyException;
+import com.example.Shopzz.CustomExceptions.CartAndCartItems.CartNotFoundForUserException;
+import com.example.Shopzz.CustomExceptions.CartAndCartItems.QuantityException;
+import com.example.Shopzz.CustomExceptions.Orders.InvalidStatusException;
+import com.example.Shopzz.CustomExceptions.Orders.OrderAlreadyCancelledException;
+import com.example.Shopzz.CustomExceptions.Orders.OrderCannotUpdateException;
+import com.example.Shopzz.CustomExceptions.Orders.OrderNotFoundException;
+import com.example.Shopzz.CustomExceptions.Users.UserNotFoundException;
 import com.example.Shopzz.Entities.*;
+import com.example.Shopzz.Enums.OrderStatus;
 import com.example.Shopzz.Repositories.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
-import java.util.ArrayList;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class OrderService {
 
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private ProductRepository productRepository;
-
-    @Autowired
-    private CartRepository cartRepository;
-
-    @Autowired
-    private CartItemsRepository cartItemsRepository;
-
-    @Autowired
-    private OrderRepository orderRepository;
-
-    @Autowired
-    private OrderItemsRepository orderItemsRepository;
-
-    private final Logger log= LoggerFactory.getLogger(OrderService.class);
+    private final UserRepository userRepository;
+    private final ProductRepository productRepository;
+    private final CartRepository cartRepository;
+    private final OrderRepository orderRepository;
 
 
     //GET ALL ORDERS
@@ -43,33 +36,38 @@ public class OrderService {
 
     //GET ORDERS BY USER ID
     public List<Order> getOrdersByUserId(Integer userId){
-        User user=userRepository.findById(userId)
-                .orElseThrow(()->new ResourceNotFoundException("User Id with"+userId+" not found"));
-        return orderRepository.findByUser(user);
+        if(!userRepository.existsById(userId)){
+            throw new UserNotFoundException(userId);
+        }
+        List<Order> orders=orderRepository.findByUserUserId(userId);
+        return orders;
     }
 
     //GET ORDERS BY STATUS
-    public List<Order> getOrdersByStatus(String status) {
-        return orderRepository.getOrdersByStatus(status);
+    public List<Order> getOrdersByStatus(OrderStatus status) {
+        return orderRepository.findByStatus(status);
     }
 
     //PLACE ORDER
     @Transactional
     public Order placeOrder(Integer userId){
-        User user=userRepository.findById(userId)
-                .orElseThrow(()->new ResourceNotFoundException("User Id with"+userId+" not found"));
 
-        Cart cart=cartRepository.findByUser(user);
-        if(cart==null || cart.getItems().isEmpty()){
-            throw new ResourceNotFoundException("Cart with " +userId+ "is empty");
+        User user=userRepository.findById(userId)
+                .orElseThrow(()->new UserNotFoundException(userId));
+
+        Cart cart=cartRepository.findByUserUserId(user.getUserId())
+                .orElseThrow(()->new CartNotFoundForUserException(userId));
+
+
+        if(cart.getItems().isEmpty()){
+            throw new CartEmptyException(userId);
         }
 
         Order order=new Order();
         order.setUser(user);
-        order.setOrderDate(LocalDate.now());
-        order.setTotal(cart.getSubTotalPrice());
+        order.setStatus(OrderStatus.CREATED);
 
-        List<OrderItems> orderItemsList=new ArrayList<>();
+        BigDecimal itemsTotal=BigDecimal.ZERO;
 
         for(CartItems item :cart.getItems()){
 
@@ -77,7 +75,7 @@ public class OrderService {
 
             // Check stock availability
             if (product.getStock() < item.getQuantity()) {
-                throw new RuntimeException("Not enough stock for product: " + product.getProductName());
+                throw new QuantityException(product.getProductName());
             }
 
             // Reduce stock
@@ -85,19 +83,43 @@ public class OrderService {
             productRepository.save(product);
 
             OrderItems orderItem=new OrderItems();
-            orderItem.setOrder(order);
-            orderItem.setProduct(item.getProduct());
+            orderItem.setProduct(product);
             orderItem.setQuantity(item.getQuantity());
-            orderItem.setSubTotal(item.getQuantity()*item.getProduct().getPrice());
-            orderItemsList.add(orderItem);
+            orderItem.setPriceAtOrderTime(item.getPriceAtAddTime());
+            order.addItem(orderItem);
+
+
+            itemsTotal=itemsTotal.add(item.getProductTotal());
         }
 
-        order.setOrderItems(orderItemsList);
+        BigDecimal tax=itemsTotal.multiply(new BigDecimal("0.18"));
+
+        BigDecimal delivery=
+                itemsTotal.compareTo(new BigDecimal("1000"))>=0
+                        ? BigDecimal.ZERO : new BigDecimal("50");
+
+        BigDecimal discount;
+        if(itemsTotal.compareTo(new BigDecimal("10000"))>=0){
+            discount=new BigDecimal("1000");
+        }else if(itemsTotal.compareTo(new BigDecimal("5000"))>=0){
+            discount=new BigDecimal("500");
+        }else if(itemsTotal.compareTo(new BigDecimal("3000"))>=0){
+            discount=new BigDecimal("300");
+        }else{
+            discount=BigDecimal.ZERO;
+        }
+        BigDecimal grandTotal= itemsTotal.add(tax).add(delivery).subtract(discount);
+
+        order.setItemsTotal(itemsTotal);
+        order.setTaxAmount(tax);
+        order.setDeliveryFee(delivery);
+        order.setDiscountAmount(discount);
+        order.setGrandTotal(grandTotal);
+        order.setExpectedDeliveryDate(LocalDateTime.now().plusDays(5));
 
         Order savedOrder=orderRepository.save(order);
 
-        cartItemsRepository.deleteAll(cart.getItems());
-        cart.setSubTotalPrice(0);
+        cart.getItems().clear();
         cartRepository.save(cart);
 
         return savedOrder;
@@ -105,70 +127,54 @@ public class OrderService {
 
     //CANCEL ORDER
     @Transactional
-    public String cancelOrder(Integer orderId) {
+    public Order cancelOrder(Integer orderId) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order Id with " + orderId+" not found"));
+                .orElseThrow(() -> new OrderNotFoundException(orderId));
 
-        if ("CANCELED".equalsIgnoreCase(order.getStatus())) {
-            throw new RuntimeException("Order already canceled!");
+        if (order.getStatus()==OrderStatus.CANCELLED) {
+            throw new OrderAlreadyCancelledException();
         }
 
-        // Get all items for this order
-        List<OrderItems> orderItems = orderItemsRepository.findByOrder(order);
-
         // Restore stock for each product
-        for (OrderItems item : orderItems) {
+        for (OrderItems item : order.getOrderItems()) {
             Product product = item.getProduct();
             product.setStock(product.getStock() + item.getQuantity());
             productRepository.save(product);
         }
 
         // MARK ORDER AS CANCELLED
-        order.setStatus("CANCELED");
-        orderRepository.save(order);
+        order.setStatus(OrderStatus.CANCELLED);
+        order.setCanceledDate(LocalDateTime.now());
 
-        return "Order Id with "+orderId+" has been canceled and stock restored.";
+        return orderRepository.save(order);
     }
 
     //UPDATE STATUS
     @Transactional
-    public Order updateOrderStatus(Integer orderId, String newStatus) {
+    public Order updateOrderStatus(Integer orderId,OrderStatus newStatus) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found with ID: " + orderId));
+                .orElseThrow(() -> new OrderNotFoundException(orderId));
 
-        String currentStatus = order.getStatus();
-
-        if (currentStatus.equalsIgnoreCase("CANCELED") || currentStatus.equalsIgnoreCase("DELIVERED")) {
-            throw new RuntimeException("Cannot update status. Order is already " + currentStatus);
+        if(order.getStatus()==OrderStatus.CANCELLED ||
+                order.getStatus()==OrderStatus.DELIVERED){
+            throw new OrderCannotUpdateException(newStatus);
         }
 
-        switch (newStatus.toUpperCase()) {
-            case "SHIPPED":
-                order.setStatus("SHIPPED");
-                order.setShippedDate(LocalDate.now());
-                break;
+        switch(newStatus){
+            case SHIPPED -> {
+                order.setStatus(OrderStatus.SHIPPED);
+                order.setShippedDate(LocalDateTime.now());
+            }
 
-            case "DELIVERED":
-                order.setStatus("DELIVERED");
-                order.setDeliveredDate(LocalDate.now());
-                break;
-
-            case "CANCELED":
-                // Restore stock
-                List<OrderItems> orderItems = orderItemsRepository.findByOrder(order);
-                for (OrderItems item : orderItems) {
-                    Product product = item.getProduct();
-                    product.setStock(product.getStock() + item.getQuantity());
-                    productRepository.save(product);
-                }
-                order.setStatus("CANCELED");
-                order.setCanceledDate(LocalDate.now());
-                break;
-
-            default:
-                throw new RuntimeException("Invalid status! Allowed: SHIPPED, DELIVERED, CANCELED");
+            case DELIVERED -> {
+                order.setStatus(OrderStatus.DELIVERED);
+                order.setDeliveredDate(LocalDateTime.now());
+            }
+            case CANCELLED -> {
+                return cancelOrder(orderId);
+            }
+            default -> throw new InvalidStatusException();
         }
-
         return orderRepository.save(order);
     }
 

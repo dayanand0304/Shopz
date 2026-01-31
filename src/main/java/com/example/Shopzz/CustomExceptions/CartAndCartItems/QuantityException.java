@@ -8,4 +8,8 @@ public class QuantityException extends RuntimeException{
     public QuantityException(){
         super("Quantity must be positive");
     }
+
+    public QuantityException(String productName){
+        super("Not enough stock for " + productName);
+    }
 }

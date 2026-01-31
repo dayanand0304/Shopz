@@ -3,10 +3,16 @@ package com.example.Shopzz.Entities;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "order_items")
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class OrderItems {
@@ -16,57 +22,29 @@ public class OrderItems {
     private Integer orderItemsId;
 
 
-    @ManyToOne
-    @JoinColumn(name="order_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name="order_id",nullable = false)
     @JsonBackReference
     private Order order;
 
-
-    @ManyToOne
-    @JoinColumn(name = "product_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_id",nullable = false)
     private Product product;
 
+    @Column(nullable = false)
     private Integer quantity;
 
-    private Integer subtotal;
+    @Column(nullable = false,precision = 10,scale = 2)
+    private BigDecimal priceAtOrderTime;
 
-    public Integer getSubTotal(){
-        return product.getPrice()*quantity;
-    }
+    //Line Total (price*quantity)
+    @Column(nullable = false,precision = 10,scale = 2)
+    private BigDecimal itemsTotal;
 
-    public void setSubTotal(Integer subtotal){
-        this.subtotal=subtotal;
-    }
-
-    public Integer getOrderItemsId() {
-        return orderItemsId;
-    }
-
-    public void setOrderItemsId(Integer orderItemsId) {
-        this.orderItemsId = orderItemsId;
-    }
-
-    public Order getOrder() {
-        return order;
-    }
-
-    public void setOrder(Order order) {
-        this.order = order;
-    }
-
-    public Product getProduct() {
-        return product;
-    }
-
-    public void setProduct(Product product) {
-        this.product = product;
-    }
-
-    public Integer getQuantity() {
-        return quantity;
-    }
-
-    public void setQuantity(Integer quantity) {
-        this.quantity = quantity;
+    @PrePersist
+    void calculateLineTotal(){
+        if(priceAtOrderTime != null && quantity != null){
+            itemsTotal = priceAtOrderTime.multiply(BigDecimal.valueOf(quantity));
+        }
     }
 }

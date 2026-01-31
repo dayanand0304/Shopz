@@ -1,7 +1,12 @@
 package com.example.Shopzz.ExceptionHandler;
 
+import com.example.Shopzz.CustomExceptions.CartAndCartItems.*;
 import com.example.Shopzz.CustomExceptions.Category.CategoryAlreadyExistsException;
 import com.example.Shopzz.CustomExceptions.Category.CategoryNotFoundException;
+import com.example.Shopzz.CustomExceptions.Orders.InvalidStatusException;
+import com.example.Shopzz.CustomExceptions.Orders.OrderAlreadyCancelledException;
+import com.example.Shopzz.CustomExceptions.Orders.OrderCannotUpdateException;
+import com.example.Shopzz.CustomExceptions.Orders.OrderNotFoundException;
 import com.example.Shopzz.CustomExceptions.Products.ProductAlreadyExistsException;
 import com.example.Shopzz.CustomExceptions.Products.ProductNotFoundException;
 import com.example.Shopzz.CustomExceptions.Users.UserEmailAlreadyExistsException;
@@ -23,7 +28,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({
             UserNotFoundException.class,
             CategoryNotFoundException.class,
-            ProductNotFoundException.class
+            ProductNotFoundException.class,
+            CartItemNotFoundException.class,
+            CartItemNotFoundInCartException.class,
+            CartNotFoundException.class,
+            CartNotFoundForUserException.class,
+            OrderNotFoundException.class
     })
     public ResponseEntity<ErrorResponse> handleNotFound(RuntimeException ex,
                                                         HttpServletRequest request){
@@ -34,11 +44,29 @@ public class GlobalExceptionHandler {
         );
     }
 
+    //400: Bad Request
+    @ExceptionHandler({
+            CartEmptyException.class,
+            QuantityException.class,
+            InvalidStatusException.class,
+            OrderCannotUpdateException.class,
+            OrderAlreadyCancelledException.class
+    })
+    public ResponseEntity<ErrorResponse> handleBadRequest(RuntimeException ex,
+                                                          HttpServletRequest request){
+        return buildErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+    }
+
     //409: CONFLICT
     @ExceptionHandler({
             UserEmailAlreadyExistsException.class,
             CategoryAlreadyExistsException.class,
-            ProductAlreadyExistsException.class
+            ProductAlreadyExistsException.class,
+            CartAlreadyExistsForUserException.class
     })
     public ResponseEntity<ErrorResponse> handleConflict(RuntimeException ex,
                                                         HttpServletRequest request){
@@ -62,7 +90,7 @@ public class GlobalExceptionHandler {
 
         return buildErrorResponse(
                 HttpStatus.BAD_REQUEST,
-                ex.getMessage(),
+                message,
                 request.getRequestURI()
         );
     }

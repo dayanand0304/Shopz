@@ -1,16 +1,22 @@
 package com.example.Shopzz.Entities;
 
+import com.example.Shopzz.Enums.OrderStatus;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-import java.time.LocalDate;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Table(name = "orders")
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class Order {
@@ -19,99 +25,57 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer orderId;
 
-    @ManyToOne
-    @JoinColumn(name="user_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name="user_id",nullable = false)
     private User user;
 
-    @OneToMany(mappedBy = "order",cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "order",
+            cascade = CascadeType.ALL,
+            fetch = FetchType.LAZY,
+            orphanRemoval = true)
     @JsonManagedReference
     private List<OrderItems> orderItems=new ArrayList<>();
 
-    private Integer total;
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal itemsTotal;   // sum of line totals
 
-    private LocalDate orderDate;
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal taxAmount;    // GST/VAT
 
-    private String status="PLACED";
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal deliveryFee;
 
-    private LocalDate shippedDate;
-    private LocalDate deliveredDate;
-    private LocalDate canceledDate;
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal discountAmount;
 
-    public Integer getCalculatedTotal() {
-        return orderItems == null
-                ? 0
-                : orderItems.stream().mapToInt(OrderItems::getSubTotal).sum();
+    @Column(nullable = false,precision = 10,scale = 2)
+    private BigDecimal grandTotal;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private OrderStatus status;
+
+    @Column(nullable = false,updatable = false)
+    private LocalDateTime orderDate;
+
+    private LocalDateTime shippedDate;
+    private LocalDateTime expectedDeliveryDate;
+    private LocalDateTime deliveredDate;
+    private LocalDateTime canceledDate;
+
+    @PrePersist
+    void onCreate() {
+        orderDate = LocalDateTime.now();
+        if (status == null) status = OrderStatus.CREATED;
     }
 
-    public Integer getOrderId() {
-        return orderId;
+    public void addItem(OrderItems items){
+        orderItems.add(items);
+        items.setOrder(this);
     }
 
-    public void setOrderId(Integer orderId) {
-        this.orderId = orderId;
-    }
-
-    public User getUser() {
-        return user;
-    }
-
-    public void setUser(User user) {
-        this.user = user;
-    }
-
-    public List<OrderItems> getOrderItems() {
-        return orderItems;
-    }
-
-    public void setOrderItems(List<OrderItems> orderItems) {
-        this.orderItems = orderItems;
-    }
-
-    public Integer getTotal() {
-        return total;
-    }
-
-    public void setTotal(Integer total) {
-        this.total = total;
-    }
-
-    public LocalDate getOrderDate() {
-        return orderDate;
-    }
-
-    public void setOrderDate(LocalDate orderDate) {
-        this.orderDate = orderDate;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public LocalDate getShippedDate() {
-        return shippedDate;
-    }
-
-    public void setShippedDate(LocalDate shippedDate) {
-        this.shippedDate = shippedDate;
-    }
-
-    public LocalDate getDeliveredDate() {
-        return deliveredDate;
-    }
-
-    public void setDeliveredDate(LocalDate deliveredDate) {
-        this.deliveredDate = deliveredDate;
-    }
-
-    public LocalDate getCanceledDate() {
-        return canceledDate;
-    }
-
-    public void setCanceledDate(LocalDate canceledDate) {
-        this.canceledDate = canceledDate;
+    public void removeItem(OrderItems items){
+        orderItems.remove(items);
+        items.setOrder(null);
     }
 }

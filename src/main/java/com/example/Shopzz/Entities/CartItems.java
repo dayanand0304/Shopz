@@ -33,12 +33,12 @@ public class CartItems {
     @Column(nullable = false)
     private Integer quantity;
 
-    @Column(nullable = false, precision = 8, scale = 2)
+    @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal priceAtAddTime;
 
     @Transient
     public BigDecimal getProductTotal(){
-        if(product==null || product.getPrice()==null || quantity==0){
+        if(priceAtAddTime==null || product.getPrice()==null || quantity==0){
             return BigDecimal.ZERO;
         }
         return priceAtAddTime.multiply(BigDecimal.valueOf(quantity));
