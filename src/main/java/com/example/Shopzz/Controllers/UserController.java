@@ -2,7 +2,7 @@ package com.example.Shopzz.Controllers;
 import com.example.Shopzz.DTO.Request.UserCreateRequest;
 import com.example.Shopzz.DTO.Request.UserUpdateRequest;
 import com.example.Shopzz.DTO.Response.UserResponse;
-import com.example.Shopzz.DTO.UserMapper;
+import com.example.Shopzz.DTO.Mapper.UserMapper;
 import com.example.Shopzz.Enums.Role;
 import com.example.Shopzz.Models.*;
 import com.example.Shopzz.Services.*;

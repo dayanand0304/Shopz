@@ -1,4 +1,4 @@
-package com.example.Shopzz.DTO;
+package com.example.Shopzz.DTO.Mapper;
 
 import com.example.Shopzz.DTO.Request.CategoryCreateRequest;
 import com.example.Shopzz.DTO.Request.CategoryUpdateRequest;

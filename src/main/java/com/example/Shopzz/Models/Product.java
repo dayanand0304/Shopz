@@ -27,14 +27,14 @@ public class Product {
     @Column(length = 500)
     private String description;
 
-    @Column(nullable = false,precision = 12,scale = 2)
+    @Column(nullable = false,precision = 8,scale = 2)
     private BigDecimal price;
 
     @Column(nullable = false)
     private Integer stock;
 
     @Column(nullable = false)
-    private Boolean active;
+    private Boolean active=true;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name="category_id",nullable = false)
@@ -50,9 +50,6 @@ public class Product {
     void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = createdAt;
-
-        if (active == null) active = true;
-        if (stock == null) stock = 0;
     }
 
     @PreUpdate

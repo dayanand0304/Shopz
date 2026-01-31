@@ -1,6 +1,6 @@
 package com.example.Shopzz.Controllers;
 
-import com.example.Shopzz.DTO.CategoryMapper;
+import com.example.Shopzz.DTO.Mapper.CategoryMapper;
 import com.example.Shopzz.DTO.Request.CategoryCreateRequest;
 import com.example.Shopzz.DTO.Request.CategoryUpdateRequest;
 import com.example.Shopzz.DTO.Response.CategoryResponse;

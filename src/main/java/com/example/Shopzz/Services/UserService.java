@@ -20,7 +20,7 @@ public class UserService {
 
     //GET ALL USERS
     public List<User> getAllUsers(){
-        return userRepository.findAll(Sort.by("username"));
+        return userRepository.findAll(Sort.by(("username")));
     }
 
 
