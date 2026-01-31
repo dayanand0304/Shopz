@@ -3,7 +3,7 @@ package com.example.Shopzz.DTO.Mapper;
 import com.example.Shopzz.DTO.Request.UserCreateRequest;
 import com.example.Shopzz.DTO.Request.UserUpdateRequest;
 import com.example.Shopzz.DTO.Response.UserResponse;
-import com.example.Shopzz.Models.User;
+import com.example.Shopzz.Entities.User;
 
 public class UserMapper {
     public static User create(UserCreateRequest request){

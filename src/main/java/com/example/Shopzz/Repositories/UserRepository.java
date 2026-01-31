@@ -1,7 +1,7 @@
-package com.example.Shopzz.Repositries;
+package com.example.Shopzz.Repositories;
 
 import com.example.Shopzz.Enums.Role;
-import com.example.Shopzz.Models.User;
+import com.example.Shopzz.Entities.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

@@ -3,7 +3,7 @@ package com.example.Shopzz.DTO.Mapper;
 import com.example.Shopzz.DTO.Request.CategoryCreateRequest;
 import com.example.Shopzz.DTO.Request.CategoryUpdateRequest;
 import com.example.Shopzz.DTO.Response.CategoryResponse;
-import com.example.Shopzz.Models.Category;
+import com.example.Shopzz.Entities.Category;
 
 public class CategoryMapper {
     public static Category create(CategoryCreateRequest request){

@@ -1,7 +1,7 @@
-package com.example.Shopzz.Repositries;
+package com.example.Shopzz.Repositories;
 
-import com.example.Shopzz.Models.Order;
-import com.example.Shopzz.Models.OrderItems;
+import com.example.Shopzz.Entities.Order;
+import com.example.Shopzz.Entities.OrderItems;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

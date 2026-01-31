@@ -1,6 +1,5 @@
 package com.example.Shopzz.DTO.Request;
 
-import com.example.Shopzz.Models.Category;
 import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.Setter;

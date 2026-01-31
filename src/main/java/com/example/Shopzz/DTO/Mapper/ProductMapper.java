@@ -3,8 +3,8 @@ package com.example.Shopzz.DTO.Mapper;
 import com.example.Shopzz.DTO.Request.ProductCreateRequest;
 import com.example.Shopzz.DTO.Request.ProductUpdateRequest;
 import com.example.Shopzz.DTO.Response.ProductResponse;
-import com.example.Shopzz.Models.Category;
-import com.example.Shopzz.Models.Product;
+import com.example.Shopzz.Entities.Category;
+import com.example.Shopzz.Entities.Product;
 
 public class ProductMapper {
     public static Product create(ProductCreateRequest request){

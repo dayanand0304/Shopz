@@ -1,16 +1,16 @@
 package com.example.Shopzz.Services;
 
-import com.example.Shopzz.Models.Cart;
-import com.example.Shopzz.Models.CartItems;
-import com.example.Shopzz.Models.Product;
-import com.example.Shopzz.Models.User;
-import com.example.Shopzz.Repositries.CartItemsRepository;
-import com.example.Shopzz.Repositries.CartRepository;
-import com.example.Shopzz.Repositries.ProductRepository;
-import com.example.Shopzz.Repositries.UserRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.example.Shopzz.CustomExceptions.CartAndCartItems.*;
+import com.example.Shopzz.CustomExceptions.Products.ProductNotFoundException;
+import com.example.Shopzz.CustomExceptions.Users.UserNotFoundException;
+import com.example.Shopzz.Entities.Cart;
+import com.example.Shopzz.Entities.CartItems;
+import com.example.Shopzz.Entities.Product;
+import com.example.Shopzz.Repositories.CartItemsRepository;
+import com.example.Shopzz.Repositories.CartRepository;
+import com.example.Shopzz.Repositories.ProductRepository;
+import com.example.Shopzz.Repositories.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,29 +18,31 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class CartItemsService {
 
-    @Autowired
-    private CartRepository cartRepository;
 
-    @Autowired
-    private CartItemsRepository cartItemsRepository;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private ProductRepository productRepository;
-
-    private final Logger log=LoggerFactory.getLogger(CartItemsService.class);
+    private final CartRepository cartRepository;
+    private final CartItemsRepository cartItemsRepository;
+    private final UserRepository userRepository;
+    private final ProductRepository productRepository;
 
     //GET CART ITEMS BY USER ID
     public List<CartItems> getCartItemsByUserId(Integer userId){
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User Not Found"));
+        if(!userRepository.existsById(userId)){
+            throw new UserNotFoundException(userId);
+        }
+        Cart cart=cartRepository.findByUserUserId(userId)
+                .orElseThrow(()->new CartNotFoundForUserException(userId));
 
-        Cart cart=cartRepository.findByUser(user);
-        if(cart==null)throw new ResourceNotFoundException("Cart not Found for this User");
+        List<CartItems> items=cartItemsRepository.findByCart(cart);
+        return items;
+    }
+
+    //GET CART ITEMS BY CART ID
+    public List<CartItems> getCartItemsByCartId(Integer cartId){
+        Cart cart=cartRepository.findById(cartId)
+                .orElseThrow(()->new CartNotFoundException(cartId));
         return cartItemsRepository.findByCart(cart);
     }
 
@@ -48,37 +50,57 @@ public class CartItemsService {
     @Transactional
     public Cart addItemToCart(Integer cartId,Integer productId,Integer quantity) {
         Cart cart = cartRepository.findById(cartId)
-                .orElseThrow(() -> new ResourceNotFoundException("Cart with id " + cartId + " not found"));
+                .orElseThrow(() -> new CartNotFoundException(cartId));
 
         Product product=productRepository.findById(productId)
-                .orElseThrow(() -> new ResourceNotFoundException("Product with id " + productId + " not found"));
-
-
-        if (product.getStock() != null && product.getStock() < quantity) {
-            throw new IllegalArgumentException("Product have only quantity of:  " + product.getStock());
-        }
+                .orElseThrow(() -> new ProductNotFoundException(productId));
 
         Optional<CartItems> existingCart=cartItemsRepository.findByCartAndProduct(cart,product);
 
-        CartItems cartItem;
 
         if(existingCart.isPresent()){
-            cartItem =existingCart.get();
+            CartItems cartItem =existingCart.get();
             int newQty = cartItem.getQuantity() + quantity;
+            if(product.getStock()<quantity){
+                throw new QuantityException(product.getStock());
+            }
             cartItem.setQuantity(newQty);
-            cartItemsRepository.save(cartItem);
-            log.info("Updated Existing cartItem id:{} qty:{} in cart:id{}",cartItem.getCartItemId(),newQty,cart.getCartId());
-        }else{
-            cartItem=new CartItems();
-            cartItem.setCart(cart);
-            cartItem.setQuantity(quantity);
+        }else {
+            if (product.getStock() < quantity)
+                throw new QuantityException(product.getStock());
+            CartItems cartItem=new CartItems();
             cartItem.setProduct(product);
-            CartItems saved=cartItemsRepository.save(cartItem);
+            cartItem.setQuantity(quantity);
+            cartItem.setPriceAtAddTime(product.getPrice());
 
-            cart.getItems().add(saved);
-            log.info("Added new cartItem id:{} productId:{} qty:{} to cart id:{}", saved.getCartItemId(), productId, quantity, cart.getCartId());
+            cart.addItem(cartItem);
         }
         return cartRepository.save(cart);
+    }
+
+    @Transactional
+    public Cart increaseQuantity(Integer cartId,Integer cartItemId,Integer quantity){
+
+        if (quantity == null || quantity <= 0) {
+            throw new QuantityException();
+        }
+        Cart cart = cartRepository.findById(cartId)
+                .orElseThrow(() -> new CartNotFoundException(cartId));
+
+        CartItems item=cartItemsRepository.findById(cartItemId)
+                .orElseThrow(()->new CartItemNotFoundException(cartItemId));
+
+        if (!item.getCart().getCartId().equals(cartId)) {
+            throw new CartItemNotFoundInCartException(cartId);
+        }
+
+        int newQty = item.getQuantity() + quantity;
+
+        if (item.getProduct().getStock() < newQty) {
+            throw new QuantityException(item.getProduct().getStock());
+        }
+        item.setQuantity(newQty);
+        return cart;
     }
 
     //REMOVE ITEMS FROM CART
@@ -86,43 +108,30 @@ public class CartItemsService {
 
         //CHECK CART ID
         Cart cart = cartRepository.findById(cartId)
-                .orElseThrow(() -> new ResourceNotFoundException("Cart with id " + cartId + " not found"));
+                .orElseThrow(() -> new CartNotFoundException(cartId));
 
         //CHECK CART ITEM ID
         CartItems cartItem = cartItemsRepository.findById(cartItemId)
-                .orElseThrow(() -> new ResourceNotFoundException("CartItem with id " + cartItemId + " not found"));
+                .orElseThrow(() -> new CartItemNotFoundException(cartItemId));
 
         // CHECK IF ITEM IS IN CART
-        if (!cartItem.getCart().getCartId().equals(cart.getCartId())) {
-            throw new IllegalArgumentException("CartItem does not belong to the specified cart");
+        if (!cartItem.getCart().getCartId().equals(cartId)) {
+            throw new CartItemNotFoundInCartException(cartId);
         }
 
-        // REMOVE ITEM FROM CART
-        cart.getItems().removeIf(item -> item.getCartItemId().equals(cartItemId));
-
-        // DELETE ITEM FROM DATABASE
-        cartItemsRepository.delete(cartItem);
-        log.info("Deleted cartItem id:{} from cart id:{}", cartItemId, cartId);
-
+        cart.removeItem(cartItem);
         return cartRepository.save(cart);
-
     }
 
     //CLEAR CART
     @Transactional
     public void clearCart(Integer cartId) {
         Cart cart = cartRepository.findById(cartId)
-                .orElseThrow(() -> new ResourceNotFoundException("Cart with id " + cartId + " not found"));
+                .orElseThrow(() -> new CartNotFoundException(cartId));
 
-        //DELETE ITEMS FROM DATABASE
         List<CartItems> items = cartItemsRepository.findByCart(cart);
-        if (!items.isEmpty()) {
-            cartItemsRepository.deleteAll(items); // cascades if needed
-        }
 
-        //CLEAR MEMORY OBJECT
         cart.getItems().clear();
         cartRepository.save(cart);
-        log.info("Cleared cart id:{}", cartId);
     }
 }

@@ -1,28 +1,25 @@
 package com.example.Shopzz.Services;
 
-import com.example.Shopzz.Models.Cart;
-import com.example.Shopzz.Models.User;
-import com.example.Shopzz.Repositries.CartRepository;
-import com.example.Shopzz.Repositries.UserRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.example.Shopzz.CustomExceptions.CartAndCartItems.CartAlreadyExistsForUserException;
+import com.example.Shopzz.CustomExceptions.CartAndCartItems.CartNotFoundException;
+import com.example.Shopzz.CustomExceptions.CartAndCartItems.CartNotFoundForUserException;
+import com.example.Shopzz.CustomExceptions.Users.UserNotFoundException;
+import com.example.Shopzz.Entities.Cart;
+import com.example.Shopzz.Entities.User;
+import com.example.Shopzz.Repositories.CartRepository;
+import com.example.Shopzz.Repositories.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class CartService {
 
-    @Autowired
-    private CartRepository cartRepository;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    private final Logger log= LoggerFactory.getLogger(CartService.class);
+    private final CartRepository cartRepository;
+    private final UserRepository userRepository;
 
 
     //GET ALL CARTS OF ALL USERS
@@ -30,39 +27,37 @@ public class CartService {
         return cartRepository.findAll();
     }
 
-
     //GET CARTS BY USER ID
-    public Cart getCartsByUserId(Integer userId){
-        User user=userRepository.findById(userId)
-                .orElseThrow(()-> new ResourceNotFoundException("User with id " + userId + " not found"));
-        return cartRepository.findByUser(user);
+    public Cart getCartByUserId(Integer userId){
+        return cartRepository.findByUserUserId(userId)
+                .orElseThrow(()->new CartNotFoundForUserException(userId));
     }
 
     //GET CART BY CART ID
-    public Optional<Cart> getCartByCartId(Integer cartId){
-        return cartRepository.findById(cartId);
+    public Cart getCartByCartId(Integer cartId){
+        return cartRepository.findById(cartId)
+                .orElseThrow(()->new CartNotFoundException(cartId));
     }
 
     //CREATE CART BY USER ID
     public Cart createCart(Integer userId){
+        if(cartRepository.existsByUserUserId(userId)){
+            throw new CartAlreadyExistsForUserException(userId);
+        }
         User user=userRepository.findById(userId)
-                .orElseThrow(()-> new ResourceNotFoundException("User with id " + userId + " not found"));
+                .orElseThrow(()-> new UserNotFoundException(userId));
 
         Cart cart=new Cart();
         cart.setUser(user);
-        Cart saved=cartRepository.save(cart);
-        log.info("Created cart id={} for userId={}", saved.getCartId(), userId);
-        return saved;
+        user.setCart(cart);
+        return cartRepository.save(cart);
     }
 
     //DELETE CART BY CART ID
     @Transactional
     public void deleteCart(Integer cartId) {
-        if (!cartRepository.existsById(cartId)) {
-            log.warn("Attempted to delete non-existing cart id={}", cartId);
-            throw new ResourceNotFoundException("Cart with id " + cartId + " not found");
-        }
-        cartRepository.deleteById(cartId);
-        log.info("Deleted cart id={}", cartId);
+        Cart cart=cartRepository.findById(cartId)
+                        .orElseThrow(()->new CartNotFoundException(cartId));
+        cartRepository.delete(cart);
     }
 }

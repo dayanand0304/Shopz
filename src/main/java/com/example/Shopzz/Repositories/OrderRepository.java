@@ -1,12 +1,11 @@
-package com.example.Shopzz.Repositries;
+package com.example.Shopzz.Repositories;
 
-import com.example.Shopzz.Models.Order;
-import com.example.Shopzz.Models.User;
+import com.example.Shopzz.Entities.Order;
+import com.example.Shopzz.Entities.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order,Integer> {

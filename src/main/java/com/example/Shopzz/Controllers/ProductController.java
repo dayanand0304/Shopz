@@ -4,7 +4,7 @@ import com.example.Shopzz.DTO.Mapper.ProductMapper;
 import com.example.Shopzz.DTO.Request.ProductCreateRequest;
 import com.example.Shopzz.DTO.Request.ProductUpdateRequest;
 import com.example.Shopzz.DTO.Response.ProductResponse;
-import com.example.Shopzz.Models.Product;
+import com.example.Shopzz.Entities.Product;
 import com.example.Shopzz.Services.CategoryService;
 import com.example.Shopzz.Services.ProductService;
 import jakarta.validation.Valid;

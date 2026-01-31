@@ -1,7 +1,7 @@
 package com.example.Shopzz.Services;
 
-import com.example.Shopzz.Models.*;
-import com.example.Shopzz.Repositries.*;
+import com.example.Shopzz.Entities.*;
+import com.example.Shopzz.Repositories.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

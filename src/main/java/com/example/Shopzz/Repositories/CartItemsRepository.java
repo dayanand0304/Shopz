@@ -1,8 +1,8 @@
-package com.example.Shopzz.Repositries;
+package com.example.Shopzz.Repositories;
 
-import com.example.Shopzz.Models.Cart;
-import com.example.Shopzz.Models.CartItems;
-import com.example.Shopzz.Models.Product;
+import com.example.Shopzz.Entities.Cart;
+import com.example.Shopzz.Entities.CartItems;
+import com.example.Shopzz.Entities.Product;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

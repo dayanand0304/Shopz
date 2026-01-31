@@ -1,6 +1,6 @@
-package com.example.Shopzz.Repositries;
+package com.example.Shopzz.Repositories;
 
-import com.example.Shopzz.Models.Category;
+import com.example.Shopzz.Entities.Category;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

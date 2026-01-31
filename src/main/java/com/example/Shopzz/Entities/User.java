@@ -1,4 +1,4 @@
-package com.example.Shopzz.Models;
+package com.example.Shopzz.Entities;
 
 
 import com.example.Shopzz.Enums.Role;
@@ -32,4 +32,7 @@ public class User{
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
+
+    @OneToOne(mappedBy = "user",cascade = CascadeType.ALL)
+    private Cart cart;
 }

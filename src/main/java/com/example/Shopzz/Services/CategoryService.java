@@ -2,8 +2,8 @@ package com.example.Shopzz.Services;
 
 import com.example.Shopzz.CustomExceptions.Category.CategoryAlreadyExistsException;
 import com.example.Shopzz.CustomExceptions.Category.CategoryNotFoundException;
-import com.example.Shopzz.Models.Category;
-import com.example.Shopzz.Repositries.CategoryRepository;
+import com.example.Shopzz.Entities.Category;
+import com.example.Shopzz.Repositories.CategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;

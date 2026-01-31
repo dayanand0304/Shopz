@@ -1,9 +1,9 @@
 package com.example.Shopzz.Services;
 
-import com.example.Shopzz.Models.Order;
-import com.example.Shopzz.Models.OrderItems;
-import com.example.Shopzz.Repositries.OrderItemsRepository;
-import com.example.Shopzz.Repositries.OrderRepository;
+import com.example.Shopzz.Entities.Order;
+import com.example.Shopzz.Entities.OrderItems;
+import com.example.Shopzz.Repositories.OrderItemsRepository;
+import com.example.Shopzz.Repositories.OrderRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

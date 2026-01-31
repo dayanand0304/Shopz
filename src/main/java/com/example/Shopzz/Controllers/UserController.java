@@ -4,7 +4,7 @@ import com.example.Shopzz.DTO.Request.UserUpdateRequest;
 import com.example.Shopzz.DTO.Response.UserResponse;
 import com.example.Shopzz.DTO.Mapper.UserMapper;
 import com.example.Shopzz.Enums.Role;
-import com.example.Shopzz.Models.*;
+import com.example.Shopzz.Entities.*;
 import com.example.Shopzz.Services.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

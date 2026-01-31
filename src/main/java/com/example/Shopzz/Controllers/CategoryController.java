@@ -4,7 +4,7 @@ import com.example.Shopzz.DTO.Mapper.CategoryMapper;
 import com.example.Shopzz.DTO.Request.CategoryCreateRequest;
 import com.example.Shopzz.DTO.Request.CategoryUpdateRequest;
 import com.example.Shopzz.DTO.Response.CategoryResponse;
-import com.example.Shopzz.Models.Category;
+import com.example.Shopzz.Entities.Category;
 import com.example.Shopzz.Services.CategoryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
