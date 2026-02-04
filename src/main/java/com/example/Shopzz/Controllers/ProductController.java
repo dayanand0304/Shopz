@@ -1,10 +1,12 @@
 package com.example.Shopzz.Controllers;
 
+import com.example.Shopzz.CustomExceptions.Products.ProductNotFoundException;
 import com.example.Shopzz.DTO.Mapper.ProductMapper;
 import com.example.Shopzz.DTO.Request.ProductCreateRequest;
 import com.example.Shopzz.DTO.Request.ProductUpdateRequest;
 import com.example.Shopzz.DTO.Response.ProductResponse;
 import com.example.Shopzz.Entities.Product;
+import com.example.Shopzz.Repositories.ProductRepository;
 import com.example.Shopzz.Services.CategoryService;
 import com.example.Shopzz.Services.ProductService;
 import jakarta.validation.Valid;
@@ -24,6 +26,7 @@ public class ProductController {
 
     private final ProductService productService;
     private final CategoryService categoryService;
+    private final ProductRepository productRepository;
 
     @GetMapping
     public ResponseEntity<List<ProductResponse>> getAllProducts(){
@@ -117,10 +120,13 @@ public class ProductController {
         return ResponseEntity.noContent().build();
     }
 
-    @PutMapping("/{productId}")
+    @PatchMapping("/{productId}")
     public ResponseEntity<ProductResponse> updateProduct(@PathVariable Integer productId,
                                                          @Valid @RequestBody ProductUpdateRequest request){
-        Product product=ProductMapper.update(request);
+        Product product=productRepository.findById(productId)
+                .orElseThrow(()->new ProductNotFoundException(productId));
+
+        ProductMapper.update(product,request);
         Product updated=productService.updateProduct(productId,product);
         return ResponseEntity.ok(ProductMapper.response(updated));
     }

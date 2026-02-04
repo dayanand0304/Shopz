@@ -12,6 +12,7 @@ import com.example.Shopzz.CustomExceptions.Products.ProductNotFoundException;
 import com.example.Shopzz.CustomExceptions.Users.UserEmailAlreadyExistsException;
 import com.example.Shopzz.CustomExceptions.Users.UserNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
+import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -57,6 +59,24 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(
                 HttpStatus.BAD_REQUEST,
                 ex.getMessage(),
+                request.getRequestURI()
+        );
+    }
+
+    //400: input violation failure
+    @ExceptionHandler({
+            ConstraintViolationException.class
+    })
+    public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException ex,
+                                                                   HttpServletRequest request){
+        String message=ex.getConstraintViolations()
+                .stream()
+                .map(v->v.getPropertyPath()+": "+v.getMessage())
+                .collect(Collectors.joining());
+
+        return buildErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                message,
                 request.getRequestURI()
         );
     }
@@ -107,6 +127,8 @@ public class GlobalExceptionHandler {
                 request.getRequestURI()
         );
     }
+
+
 
 
     private ResponseEntity<ErrorResponse> buildErrorResponse(HttpStatus status,

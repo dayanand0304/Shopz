@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 @Getter
 @Setter
 @AllArgsConstructor
@@ -13,4 +15,6 @@ public class UserResponse {
     private String username;
     private String email;
     private Role role;
+    private Boolean active;
+    private LocalDateTime deletedAt;
 }

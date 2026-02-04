@@ -22,9 +22,7 @@ public class ProductMapper {
         return products;
     }
 
-    public static Product update(ProductUpdateRequest request){
-        Product products =new Product();
-
+    public static void update(Product products,ProductUpdateRequest request){
         products.setProductName(request.getProductName());
         products.setDescription(request.getDescription());
         products.setPrice(request.getPrice());
@@ -36,14 +34,9 @@ public class ProductMapper {
             category.setCategoryId(request.getCategoryId());
             products.setCategory(category);
         }
-        return products;
     }
     public static ProductResponse response(Product product){
 
-        Integer categoryId=null;
-        if(product.getCategory()!=null){
-            categoryId=product.getCategory().getCategoryId();
-        }
         return new ProductResponse(
                 product.getProductId(),
                 product.getProductName(),
@@ -51,9 +44,7 @@ public class ProductMapper {
                 product.getPrice(),
                 product.getStock(),
                 product.getActive(),
-                categoryId,
-                product.getCreatedAt(),
-                product.getUpdatedAt()
+                product.getCategory().getCategoryId()
         );
     }
 }

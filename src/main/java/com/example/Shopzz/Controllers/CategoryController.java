@@ -1,10 +1,12 @@
 package com.example.Shopzz.Controllers;
 
+import com.example.Shopzz.CustomExceptions.Category.CategoryNotFoundException;
 import com.example.Shopzz.DTO.Mapper.CategoryMapper;
 import com.example.Shopzz.DTO.Request.CategoryCreateRequest;
 import com.example.Shopzz.DTO.Request.CategoryUpdateRequest;
 import com.example.Shopzz.DTO.Response.CategoryResponse;
 import com.example.Shopzz.Entities.Category;
+import com.example.Shopzz.Repositories.CategoryRepository;
 import com.example.Shopzz.Services.CategoryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,7 @@ import java.util.List;
 public class CategoryController {
 
     private final CategoryService categoryService;
+    private final CategoryRepository categoryRepository;
 
     //GET ALL CATEGORIES
     @GetMapping
@@ -71,10 +74,14 @@ public class CategoryController {
     }
 
     //UPDATE CATEGORY
-    @PutMapping("/{categoryId}")
+    @PatchMapping("/{categoryId}")
     public ResponseEntity<CategoryResponse> updateCategory(@PathVariable Integer categoryId,
                                                            @Valid @RequestBody CategoryUpdateRequest request){
-        Category category=CategoryMapper.update(request);
+
+        Category category=categoryRepository.findById(categoryId)
+                .orElseThrow(()->new CategoryNotFoundException(categoryId));
+
+        CategoryMapper.update(category,request);
         Category updated=categoryService.updateCategory(categoryId,category);
         return ResponseEntity.ok(CategoryMapper.response(updated));
     }

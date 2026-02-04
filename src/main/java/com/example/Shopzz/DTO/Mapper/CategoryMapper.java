@@ -13,11 +13,9 @@ public class CategoryMapper {
         return category;
     }
 
-    public static Category update(CategoryUpdateRequest request){
-        Category category=new Category();
+    public static void update(Category category,CategoryUpdateRequest request){
         category.setCategoryName(request.getCategoryName());
         category.setActive(request.getActive());
-        return category;
     }
 
     public static CategoryResponse response(Category category){

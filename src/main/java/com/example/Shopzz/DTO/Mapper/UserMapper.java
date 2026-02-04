@@ -14,20 +14,20 @@ public class UserMapper {
         user.setRole(request.getRole());
         return user;
     }
-    public static User update(UserUpdateRequest request){
-        User user=new User();
+    public static void update(User user,UserUpdateRequest request){
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
         user.setPassword(request.getPassword());
         user.setRole(request.getRole());
-        return user;
     }
     public static UserResponse response(User user){
         return new UserResponse(
                 user.getUserId(),
                 user.getUsername(),
                 user.getEmail(),
-                user.getRole()
+                user.getRole(),
+                user.getActive(),
+                user.getDeletedAt()
         );
     }
 }

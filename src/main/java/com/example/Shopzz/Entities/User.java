@@ -8,6 +8,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "users")
 @Getter
@@ -35,4 +37,9 @@ public class User{
 
     @OneToOne(mappedBy = "user",cascade = CascadeType.ALL)
     private Cart cart;
+
+    @Column(nullable = false)
+    private Boolean active=true;
+
+    private LocalDateTime deletedAt;
 }

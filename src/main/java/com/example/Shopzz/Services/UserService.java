@@ -1,5 +1,6 @@
 package com.example.Shopzz.Services;
 
+import com.example.Shopzz.CustomExceptions.Users.InvalidActiveException;
 import com.example.Shopzz.CustomExceptions.Users.UserEmailAlreadyExistsException;
 import com.example.Shopzz.CustomExceptions.Users.UserNotFoundException;
 import com.example.Shopzz.Enums.Role;
@@ -10,6 +11,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -33,9 +35,6 @@ public class UserService {
     //GET USER BY USERNAME
     public List<User> getUsersByUserName(String userName){
         List<User> users=userRepository.findByUsername(userName);
-        if(users.isEmpty()){
-            throw new UserNotFoundException(userName);
-        }
         return users;
     }
 
@@ -48,9 +47,12 @@ public class UserService {
     //FIND BY ROLE
     public List<User> getUsersByRole(Role role){
         List<User> users=userRepository.findByRole(role);
-        if(users.isEmpty()){
-            throw new UserNotFoundException(role);
-        }
+        return users;
+    }
+
+    //FIND BY ACTIVE
+    public List<User> getUsersByActive(Boolean active){
+        List<User> users=userRepository.findByActive(active);
         return users;
     }
 
@@ -67,9 +69,25 @@ public class UserService {
     public void deleteUser(Integer userId){
         User user=userRepository.findById(userId)
                 .orElseThrow(()->new UserNotFoundException(userId));
-
-        userRepository.delete(user);
+        user.setActive(false);
+        user.setDeletedAt(LocalDateTime.now());
+        userRepository.save(user);
     }
+
+    //REACTIVATE USER IF DELETED
+    @Transactional
+    public void reactivateUser(Integer userId) {
+        User user = getUserByUserId(userId);
+
+        if (Boolean.TRUE.equals(user.getActive())) {
+            return;
+        }
+
+        user.setActive(true);
+        user.setDeletedAt(null);
+        userRepository.save(user);
+    }
+
 
     //UPDATE USER DETAILS BY USER ID
     @Transactional
@@ -90,6 +108,9 @@ public class UserService {
                     }
                     if(updatedUser.getRole()!=null){
                         existingUser.setRole(updatedUser.getRole());
+                    }
+                    if(updatedUser.getActive()!=null){
+                        throw new InvalidActiveException();
                     }
                     return userRepository.save(existingUser);
                 })

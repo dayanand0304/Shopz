@@ -52,9 +52,6 @@ public class ProductService {
     //GET PRODUCTS BY BETWEEN MIN AND MAX PRICE
     public List<Product> getProductsByPriceInBetween(BigDecimal min,BigDecimal max){
         List<Product> products=productRepository.findByPriceBetween(min,max);
-        if(products.isEmpty()){
-            throw new ProductNotFoundException(min,max);
-        }
         return products;
     }
 
@@ -69,18 +66,12 @@ public class ProductService {
             throw new CategoryNotFoundException(categoryId);
         }
         List<Product> products=productRepository.findByCategoryCategoryId(categoryId);
-        if(products.isEmpty()){
-            throw new ProductNotFoundException("There is no products with category id: "+categoryId);
-        }
         return products;
     }
 
     //GET PRODUCTS BY CATEGORY NAME
     public List<Product> getProductsByCategoryName(String categoryName){
         List<Product> products=productRepository.findByCategoryCategoryNameIgnoreCase(categoryName);
-        if(products.isEmpty()){
-            throw new ProductNotFoundException("There is no product with category name: "+categoryName);
-        }
         return products;
     }
 
@@ -133,7 +124,10 @@ public class ProductService {
                         Integer catId=updatedProduct.getCategory().getCategoryId();
                         Category category=categoryRepository.findById(catId)
                                         .orElseThrow(()->new CategoryNotFoundException(catId));
-                        existingProduct.setCategory(updatedProduct.getCategory());
+                        existingProduct.setCategory(category);
+                    }
+                    if(updatedProduct.getActive()!=null){
+                        existingProduct.setActive(updatedProduct.getActive());
                     }
                     return productRepository.save(existingProduct);
                 })
