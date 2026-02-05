@@ -2,7 +2,6 @@ package com.example.Shopzz.Services;
 
 import com.example.Shopzz.CustomExceptions.CartAndCartItems.*;
 import com.example.Shopzz.CustomExceptions.Products.ProductNotFoundException;
-import com.example.Shopzz.CustomExceptions.Users.UserNotFoundException;
 import com.example.Shopzz.Entities.Cart;
 import com.example.Shopzz.Entities.CartItems;
 import com.example.Shopzz.Entities.Product;
@@ -14,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -27,100 +25,100 @@ public class CartItemsService {
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
 
-    //GET CART ITEMS BY USER ID
-    public List<CartItems> getCartItemsByUserId(Integer userId){
-        if(!userRepository.existsById(userId)){
-            throw new UserNotFoundException(userId);
-        }
-        Cart cart=cartRepository.findByUserUserId(userId)
-                .orElseThrow(()->new CartNotFoundForUserException(userId));
-
-        List<CartItems> items=cartItemsRepository.findByCart(cart);
-        return items;
-    }
-
-    //GET CART ITEMS BY CART ID
-    public List<CartItems> getCartItemsByCartId(Integer cartId){
-        Cart cart=cartRepository.findById(cartId)
-                .orElseThrow(()->new CartNotFoundException(cartId));
-        return cartItemsRepository.findByCart(cart);
-    }
 
     //ADD CART ITEMS TO CART
     @Transactional
-    public Cart addItemToCart(Integer cartId,Integer productId,Integer quantity) {
-        Cart cart = cartRepository.findById(cartId)
-                .orElseThrow(() -> new CartNotFoundException(cartId));
+    public Cart addItemToCart(Integer cartId,Integer productId) {
+
+        Cart cart=cartRepository.findById(cartId)
+                .orElseThrow(()->new CartNotFoundException(cartId));
 
         Product product=productRepository.findById(productId)
-                .orElseThrow(() -> new ProductNotFoundException(productId));
+                .orElseThrow(()->new ProductNotFoundException(productId));
 
-        Optional<CartItems> existingCart=cartItemsRepository.findByCartAndProduct(cart,product);
+        Optional<CartItems> item=cartItemsRepository
+                .findByCart_CartIdAndProduct_ProductId(cartId,productId);
 
 
-        if(existingCart.isPresent()){
-            CartItems cartItem =existingCart.get();
-            int newQty = cartItem.getQuantity() + quantity;
-            if(product.getStock()<quantity){
+
+        if(item.isPresent()){
+            CartItems cartItem=item.get();
+            int newQty = cartItem.getQuantity() + 1;
+            if(product.getStock()<newQty){
                 throw new QuantityException(product.getStock());
             }
             cartItem.setQuantity(newQty);
+
         }else {
-            if (product.getStock() < quantity)
+            if (product.getStock() < 1)
                 throw new QuantityException(product.getStock());
-            CartItems cartItem=new CartItems();
+
+            CartItems cartItem =new CartItems();
             cartItem.setProduct(product);
-            cartItem.setQuantity(quantity);
+            cartItem.setQuantity(1);
             cartItem.setPriceAtAddTime(product.getPrice());
 
             cart.addItem(cartItem);
         }
-        return cartRepository.save(cart);
+
+        return cartRepository.findCartWithItemsByCartId(cartId)
+                .orElseThrow(()->new CartNotFoundException(cartId));
     }
 
     @Transactional
-    public Cart increaseQuantity(Integer cartId,Integer cartItemId,Integer quantity){
+    public Cart increaseQuantity(Integer cartId,Integer productId){
 
-        if (quantity == null || quantity <= 0) {
-            throw new QuantityException();
-        }
-        Cart cart = cartRepository.findById(cartId)
-                .orElseThrow(() -> new CartNotFoundException(cartId));
+        CartItems item=cartItemsRepository
+                .findByCart_CartIdAndProduct_ProductId(cartId,productId)
+                .orElseThrow(()->new CartItemNotFoundInCartException(cartId));
 
-        CartItems item=cartItemsRepository.findById(cartItemId)
-                .orElseThrow(()->new CartItemNotFoundException(cartItemId));
 
-        if (!item.getCart().getCartId().equals(cartId)) {
-            throw new CartItemNotFoundInCartException(cartId);
-        }
-
-        int newQty = item.getQuantity() + quantity;
+        int newQty = item.getQuantity() + 1;
 
         if (item.getProduct().getStock() < newQty) {
             throw new QuantityException(item.getProduct().getStock());
         }
         item.setQuantity(newQty);
-        return cart;
+
+        return cartRepository.findCartWithItemsByCartId(cartId)
+                .orElseThrow(()->new CartNotFoundException(cartId));
+    }
+
+    @Transactional
+    public Cart decreaseQuantity(Integer cartId,Integer productId){
+
+        CartItems item=cartItemsRepository
+                .findByCart_CartIdAndProduct_ProductId(cartId,productId)
+                .orElseThrow(()->new CartItemNotFoundInCartException(cartId));
+
+        int newQty = item.getQuantity() - 1;
+
+        if (newQty<=0) {
+            Cart cart=item.getCart();
+            cart.removeItem(item);
+        }else{
+            item.setQuantity(newQty);
+        }
+        return cartRepository.findCartWithItemsByCartId(cartId)
+                .orElseThrow(()->new CartNotFoundException(cartId));
     }
 
     //REMOVE ITEMS FROM CART
-    public Cart removeItemFromCart(Integer cartId, Integer cartItemId) {
+    @Transactional
+    public Cart removeItemFromCart(Integer cartId, Integer productId) {
 
         //CHECK CART ID
         Cart cart = cartRepository.findById(cartId)
                 .orElseThrow(() -> new CartNotFoundException(cartId));
 
-        //CHECK CART ITEM ID
-        CartItems cartItem = cartItemsRepository.findById(cartItemId)
-                .orElseThrow(() -> new CartItemNotFoundException(cartItemId));
+        //CHECK CART ITEM IS EXIST IN CART
+        CartItems items=cartItemsRepository.findByCart_CartIdAndProduct_ProductId(cartId,productId)
+                .orElseThrow(()->new CartItemNotFoundInCartException(cartId));
 
-        // CHECK IF ITEM IS IN CART
-        if (!cartItem.getCart().getCartId().equals(cartId)) {
-            throw new CartItemNotFoundInCartException(cartId);
-        }
+        cart.removeItem(items);
 
-        cart.removeItem(cartItem);
-        return cartRepository.save(cart);
+        return cartRepository.findCartWithItemsByCartId(cartId)
+                .orElseThrow(()->new CartNotFoundException(cartId));
     }
 
     //CLEAR CART
@@ -129,9 +127,6 @@ public class CartItemsService {
         Cart cart = cartRepository.findById(cartId)
                 .orElseThrow(() -> new CartNotFoundException(cartId));
 
-        List<CartItems> items = cartItemsRepository.findByCart(cart);
-
         cart.getItems().clear();
-        cartRepository.save(cart);
     }
 }
