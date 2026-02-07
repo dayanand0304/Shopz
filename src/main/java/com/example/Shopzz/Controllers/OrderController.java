@@ -42,6 +42,13 @@ public class OrderController {
         return ResponseEntity.ok(orders);
     }
 
+    @GetMapping("/order/{orderId}")
+    public ResponseEntity<OrderResponse> getByOrderId(@PathVariable Integer orderId){
+        Order order=orderService.getOrderByOrderId(orderId);
+
+        return ResponseEntity.ok(OrderMapper.response(order));
+    }
+
     //GET ORDERS BY STATUS
     @GetMapping("/status")
     public ResponseEntity<List<OrderResponse>> getOrdersByStatus(@RequestParam OrderStatus status){
@@ -62,10 +69,10 @@ public class OrderController {
     }
 
     @DeleteMapping("/{orderId}")
-    public ResponseEntity<OrderResponse> cancelOrder(@PathVariable Integer orderId){
-        Order order=orderService.cancelOrder(orderId);
+    public ResponseEntity<Void> cancelOrder(@PathVariable Integer orderId){
+        orderService.cancelOrder(orderId);
 
-        return ResponseEntity.ok(OrderMapper.response(order));
+        return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/{orderId}/status")

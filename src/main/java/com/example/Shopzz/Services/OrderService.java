@@ -31,7 +31,7 @@ public class OrderService {
 
     //GET ALL ORDERS
     public List<Order> getAllOrders(){
-        return orderRepository.findAll();
+        return orderRepository.findAllWithItems();
     }
 
     //GET ORDERS BY USER ID
@@ -39,13 +39,19 @@ public class OrderService {
         if(!userRepository.existsById(userId)){
             throw new UserNotFoundException(userId);
         }
-        List<Order> orders=orderRepository.findByUserUserId(userId);
+        List<Order> orders=orderRepository.findOrderByUserIdWithItems(userId);
         return orders;
+    }
+
+    //GET ORDER BY ORDER ID
+    public Order getOrderByOrderId(Integer orderId){
+        return orderRepository.findById(orderId)
+                .orElseThrow(()->new OrderNotFoundException(orderId));
     }
 
     //GET ORDERS BY STATUS
     public List<Order> getOrdersByStatus(OrderStatus status) {
-        return orderRepository.findByStatus(status);
+        return orderRepository.findOrderByStatusWithItems(status);
     }
 
     //PLACE ORDER
@@ -92,6 +98,20 @@ public class OrderService {
             itemsTotal=itemsTotal.add(item.getProductTotal());
         }
 
+        calculateAmount(order,itemsTotal);
+        order.setExpectedDeliveryDate(LocalDateTime.now().plusDays(5));
+
+        Order savedOrder=orderRepository.save(order);
+
+        cart.getItems().clear();
+        cartRepository.save(cart);
+
+        return orderRepository.findOrderWithItems(savedOrder.getOrderId())
+                .orElseThrow(()->new OrderNotFoundException(savedOrder.getOrderId()));
+    }
+
+    //CALCULATE AMOUNT
+    private void calculateAmount(Order order,BigDecimal itemsTotal){
         BigDecimal tax=itemsTotal.multiply(new BigDecimal("0.18"));
 
         BigDecimal delivery=
@@ -115,19 +135,11 @@ public class OrderService {
         order.setDeliveryFee(delivery);
         order.setDiscountAmount(discount);
         order.setGrandTotal(grandTotal);
-        order.setExpectedDeliveryDate(LocalDateTime.now().plusDays(5));
-
-        Order savedOrder=orderRepository.save(order);
-
-        cart.getItems().clear();
-        cartRepository.save(cart);
-
-        return savedOrder;
     }
 
     //CANCEL ORDER
     @Transactional
-    public Order cancelOrder(Integer orderId) {
+    public void cancelOrder(Integer orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
 
@@ -139,20 +151,19 @@ public class OrderService {
         for (OrderItems item : order.getOrderItems()) {
             Product product = item.getProduct();
             product.setStock(product.getStock() + item.getQuantity());
-            productRepository.save(product);
         }
 
         // MARK ORDER AS CANCELLED
         order.setStatus(OrderStatus.CANCELLED);
         order.setCanceledDate(LocalDateTime.now());
 
-        return orderRepository.save(order);
+        orderRepository.save(order);
     }
 
     //UPDATE STATUS
     @Transactional
     public Order updateOrderStatus(Integer orderId,OrderStatus newStatus) {
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.findOrderWithItems(orderId)
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
 
         if(order.getStatus()==OrderStatus.CANCELLED ||
@@ -171,11 +182,12 @@ public class OrderService {
                 order.setDeliveredDate(LocalDateTime.now());
             }
             case CANCELLED -> {
-                return cancelOrder(orderId);
+                cancelOrder(orderId);
+                return orderRepository.findOrderWithItems(orderId)
+                        .orElseThrow(()->new OrderNotFoundException(orderId));
             }
             default -> throw new InvalidStatusException();
         }
         return orderRepository.save(order);
     }
-
 }

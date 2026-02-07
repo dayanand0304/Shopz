@@ -24,9 +24,7 @@ public class OrderMapper {
                 order.getGrandTotal(),
                 order.getStatus(),
                 order.getOrderDate(),
-                order.getShippedDate(),
-                order.getExpectedDeliveryDate(),
-                order.getDeliveredDate()
+                order.getExpectedDeliveryDate()
         );
     }
 }

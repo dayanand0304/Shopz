@@ -23,7 +23,5 @@ public class OrderResponse {
     private BigDecimal grandTotal;
     private OrderStatus status;
     private LocalDateTime orderDate;
-    private LocalDateTime shippedDate;
     private LocalDateTime expectedDeliveryDate;
-    private LocalDateTime deliveredDate;
 }
