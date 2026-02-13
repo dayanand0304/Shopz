@@ -1,20 +1,19 @@
 package com.example.Shopzz.Controllers;
 
-import com.example.Shopzz.CustomExceptions.Category.CategoryNotFoundException;
-import com.example.Shopzz.DTO.Mapper.CategoryMapper;
 import com.example.Shopzz.DTO.Request.CategoryCreateRequest;
 import com.example.Shopzz.DTO.Request.CategoryUpdateRequest;
 import com.example.Shopzz.DTO.Response.CategoryResponse;
-import com.example.Shopzz.Entities.Category;
+import com.example.Shopzz.DTO.Response.PageResponse;
 import com.example.Shopzz.Repositories.CategoryRepository;
 import com.example.Shopzz.Services.CategoryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 
 @RestController
 @RequestMapping("/categories")
@@ -26,44 +25,35 @@ public class CategoryController {
 
     //GET ALL CATEGORIES
     @GetMapping
-    public ResponseEntity<List<CategoryResponse>> getAll(){
-        List<CategoryResponse> categories=categoryService.getAllCategories()
-                .stream()
-                .map(CategoryMapper::response)
-                .toList();
-        return ResponseEntity.ok(categories);
+    public ResponseEntity<PageResponse<CategoryResponse>> getAll(@PageableDefault(size = 10)Pageable pageable){
+        return ResponseEntity.ok(categoryService.getAllCategories(pageable));
     }
 
     //GET CATEGORY BY ID
     @GetMapping("/{categoryId}")
     public ResponseEntity<CategoryResponse> getCategoryById(@PathVariable Integer categoryId) {
-        Category category=categoryService.getCategoryById(categoryId);
-        return ResponseEntity.ok(CategoryMapper.response(category));
+        return ResponseEntity.ok(categoryService.getCategoryById(categoryId));
     }
 
     //GET CATEGORY BY NAME
     @GetMapping("/name/{categoryName}")
     public ResponseEntity<CategoryResponse> getCategoryByName(@PathVariable String categoryName) {
-        Category category=categoryService.getCategoryByName(categoryName);
-        return ResponseEntity.ok(CategoryMapper.response(category));
+        return ResponseEntity.ok(categoryService.getCategoryByName(categoryName));
     }
 
     //GET ALL CATEGORIES BY ACTIVE
     @GetMapping("/active")
-    public ResponseEntity<List<CategoryResponse>> getAllByActive(@RequestParam Boolean active){
-        List<CategoryResponse> categories=categoryService.getCategoriesByActive(active)
-                .stream()
-                .map(CategoryMapper::response)
-                .toList();
-        return ResponseEntity.ok(categories);
+    public ResponseEntity<PageResponse<CategoryResponse>> getAllByActive(@RequestParam Boolean active,
+                                                                         @PageableDefault(size = 5)Pageable pageable){
+
+        return ResponseEntity.ok(categoryService.getCategoriesByActive(active,pageable));
     }
 
     //ADD CATEGORY
     @PostMapping
     public ResponseEntity<CategoryResponse> addCategory(@Valid @RequestBody CategoryCreateRequest request){
-        Category category=CategoryMapper.create(request);
-        Category saved=categoryService.addCategory(category);
-        return ResponseEntity.status(HttpStatus.CREATED).body(CategoryMapper.response(saved));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(categoryService.addCategory(request));
     }
 
     //DELETE CATEGORY(MEANS PUT ACTIVE OFF)
@@ -78,11 +68,6 @@ public class CategoryController {
     public ResponseEntity<CategoryResponse> updateCategory(@PathVariable Integer categoryId,
                                                            @Valid @RequestBody CategoryUpdateRequest request){
 
-        Category category=categoryRepository.findById(categoryId)
-                .orElseThrow(()->new CategoryNotFoundException(categoryId));
-
-        CategoryMapper.update(category,request);
-        Category updated=categoryService.updateCategory(categoryId,category);
-        return ResponseEntity.ok(CategoryMapper.response(updated));
+        return ResponseEntity.ok(categoryService.updateCategory(categoryId,request));
     }
 }

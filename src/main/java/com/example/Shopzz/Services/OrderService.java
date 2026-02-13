@@ -8,16 +8,21 @@ import com.example.Shopzz.CustomExceptions.Orders.OrderAlreadyCancelledException
 import com.example.Shopzz.CustomExceptions.Orders.OrderCannotUpdateException;
 import com.example.Shopzz.CustomExceptions.Orders.OrderNotFoundException;
 import com.example.Shopzz.CustomExceptions.Users.UserNotFoundException;
+import com.example.Shopzz.DTO.Mapper.OrderMapper;
+import com.example.Shopzz.DTO.PageMapper;
+import com.example.Shopzz.DTO.Response.OrderResponse;
+import com.example.Shopzz.DTO.Response.PageResponse;
 import com.example.Shopzz.Entities.*;
 import com.example.Shopzz.Enums.OrderStatus;
 import com.example.Shopzz.Repositories.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -30,33 +35,39 @@ public class OrderService {
 
 
     //GET ALL ORDERS
-    public List<Order> getAllOrders(){
-        return orderRepository.findAllWithItems();
+    public PageResponse<OrderResponse> getAllOrders(Pageable pageable){
+        Page<Order> page =orderRepository.findAllWithItems(pageable);
+
+        return PageMapper.toPageResponse(page, OrderMapper::response);
     }
 
     //GET ORDERS BY USER ID
-    public List<Order> getOrdersByUserId(Integer userId){
+    public PageResponse<OrderResponse> getOrdersByUserId(Integer userId,Pageable pageable){
         if(!userRepository.existsById(userId)){
             throw new UserNotFoundException(userId);
         }
-        List<Order> orders=orderRepository.findOrderByUserIdWithItems(userId);
-        return orders;
+        Page<Order> page=orderRepository.findOrderByUserIdWithItems(userId,pageable);
+        return PageMapper.toPageResponse(page,OrderMapper::response);
     }
 
     //GET ORDER BY ORDER ID
-    public Order getOrderByOrderId(Integer orderId){
-        return orderRepository.findById(orderId)
+    public OrderResponse getOrderByOrderId(Integer orderId){
+        Order order=orderRepository.findById(orderId)
                 .orElseThrow(()->new OrderNotFoundException(orderId));
+
+        return OrderMapper.response(order);
     }
 
     //GET ORDERS BY STATUS
-    public List<Order> getOrdersByStatus(OrderStatus status) {
-        return orderRepository.findOrderByStatusWithItems(status);
+    public PageResponse<OrderResponse> getOrdersByStatus(OrderStatus status,Pageable pageable) {
+        Page<Order> page=orderRepository.findOrderByStatusWithItems(status,pageable);
+
+        return PageMapper.toPageResponse(page,OrderMapper::response);
     }
 
     //PLACE ORDER
     @Transactional
-    public Order placeOrder(Integer userId){
+    public OrderResponse placeOrder(Integer userId){
 
         User user=userRepository.findById(userId)
                 .orElseThrow(()->new UserNotFoundException(userId));
@@ -106,8 +117,10 @@ public class OrderService {
         cart.getItems().clear();
         cartRepository.save(cart);
 
-        return orderRepository.findOrderWithItems(savedOrder.getOrderId())
+        Order saved=orderRepository.findOrderWithItems(savedOrder.getOrderId())
                 .orElseThrow(()->new OrderNotFoundException(savedOrder.getOrderId()));
+
+        return OrderMapper.response(order);
     }
 
     //CALCULATE AMOUNT
@@ -162,7 +175,7 @@ public class OrderService {
 
     //UPDATE STATUS
     @Transactional
-    public Order updateOrderStatus(Integer orderId,OrderStatus newStatus) {
+    public OrderResponse updateOrderStatus(Integer orderId,OrderStatus newStatus) {
         Order order = orderRepository.findOrderWithItems(orderId)
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
 
@@ -183,11 +196,14 @@ public class OrderService {
             }
             case CANCELLED -> {
                 cancelOrder(orderId);
-                return orderRepository.findOrderWithItems(orderId)
+                Order saved=orderRepository.findOrderWithItems(orderId)
                         .orElseThrow(()->new OrderNotFoundException(orderId));
+
+                return OrderMapper.response(saved);
             }
             default -> throw new InvalidStatusException();
         }
-        return orderRepository.save(order);
+        Order saved=orderRepository.save(order);
+        return OrderMapper.response(saved);
     }
 }

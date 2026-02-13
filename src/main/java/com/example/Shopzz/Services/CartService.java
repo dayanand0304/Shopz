@@ -4,6 +4,8 @@ import com.example.Shopzz.CustomExceptions.CartAndCartItems.CartAlreadyExistsFor
 import com.example.Shopzz.CustomExceptions.CartAndCartItems.CartNotFoundException;
 import com.example.Shopzz.CustomExceptions.CartAndCartItems.CartNotFoundForUserException;
 import com.example.Shopzz.CustomExceptions.Users.UserNotFoundException;
+import com.example.Shopzz.DTO.Mapper.CartMapper;
+import com.example.Shopzz.DTO.Response.CartResponse;
 import com.example.Shopzz.Entities.Cart;
 import com.example.Shopzz.Entities.User;
 import com.example.Shopzz.Repositories.CartRepository;
@@ -21,19 +23,23 @@ public class CartService {
 
 
     //GET CARTS BY USER ID
-    public Cart getCartByUserId(Integer userId){
-        return cartRepository.findCartWithItemsByUser_UserId(userId)
+    public CartResponse getCartByUserId(Integer userId){
+        Cart cart=cartRepository.findCartWithItemsByUser_UserId(userId)
                 .orElseThrow(()->new CartNotFoundForUserException(userId));
+
+        return CartMapper.response(cart);
     }
 
     //GET CART BY CART ID
-    public Cart getCartByCartId(Integer cartId){
-        return cartRepository.findCartWithItemsByCartId(cartId)
+    public CartResponse getCartByCartId(Integer cartId){
+        Cart cart=cartRepository.findCartWithItemsByCartId(cartId)
                 .orElseThrow(()->new CartNotFoundException(cartId));
+
+        return CartMapper.response(cart);
     }
 
     //CREATE CART BY USER ID
-    public Cart createCart(Integer userId) {
+    public CartResponse createCart(Integer userId) {
         if (cartRepository.existsByUserUserId(userId)) {
             throw new CartAlreadyExistsForUserException(userId);
         }
@@ -43,6 +49,9 @@ public class CartService {
         Cart cart = new Cart();
         cart.setUser(user);
         user.setCart(cart);
-        return cartRepository.save(cart);
+
+        Cart saved=cartRepository.save(cart);
+
+        return CartMapper.response(saved);
     }
 }

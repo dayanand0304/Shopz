@@ -2,13 +2,19 @@ package com.example.Shopzz.Services;
 
 import com.example.Shopzz.CustomExceptions.Category.CategoryAlreadyExistsException;
 import com.example.Shopzz.CustomExceptions.Category.CategoryNotFoundException;
+import com.example.Shopzz.DTO.Mapper.CategoryMapper;
+import com.example.Shopzz.DTO.PageMapper;
+import com.example.Shopzz.DTO.Request.CategoryCreateRequest;
+import com.example.Shopzz.DTO.Request.CategoryUpdateRequest;
+import com.example.Shopzz.DTO.Response.CategoryResponse;
+import com.example.Shopzz.DTO.Response.PageResponse;
 import com.example.Shopzz.Entities.Category;
 import com.example.Shopzz.Repositories.CategoryRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -17,33 +23,45 @@ public class CategoryService {
     private final CategoryRepository categoryRepository;
 
     //GET ALL CATEGORIES
-    public List<Category> getAllCategories(){
-        return categoryRepository.findAll(Sort.by("categoryName"));
+    public PageResponse<CategoryResponse> getAllCategories(Pageable pageable){
+
+        Page<Category> page=categoryRepository.findAll(pageable);
+
+        return PageMapper.toPageResponse(page, CategoryMapper::response);
     }
 
     //GET CATEGORY BY ID
-    public Category getCategoryById(Integer categoryId){
-        return categoryRepository.findById(categoryId)
+    public CategoryResponse getCategoryById(Integer categoryId){
+        Category category= categoryRepository.findById(categoryId)
                 .orElseThrow(()->new CategoryNotFoundException(categoryId));
+
+        return CategoryMapper.response(category);
     }
 
     //GET CATEGORY WITH NAME
-    public Category getCategoryByName(String categoryName){
-        return categoryRepository.findByCategoryNameIgnoreCase(categoryName)
+    public CategoryResponse getCategoryByName(String categoryName){
+        Category category=categoryRepository.findByCategoryNameIgnoreCase(categoryName)
                 .orElseThrow(()->new CategoryNotFoundException(categoryName));
+
+        return CategoryMapper.response(category);
     }
 
     //GET CATEGORIES BY ACTIVE
-    public List<Category> getCategoriesByActive(Boolean active){
-        return categoryRepository.findByActive(active);
+    public PageResponse<CategoryResponse> getCategoriesByActive(Boolean active,Pageable pageable){
+        Page<Category> page=categoryRepository.findByActive(active,pageable);
+
+        return PageMapper.toPageResponse(page,CategoryMapper::response);
     }
 
     //ADD CATEGORY
-    public Category addCategory(Category category){
-        if(categoryRepository.existsByCategoryNameIgnoreCase(category.getCategoryName())){
-            throw new CategoryAlreadyExistsException(category.getCategoryName());
+    public CategoryResponse addCategory(CategoryCreateRequest request){
+        if(categoryRepository.existsByCategoryNameIgnoreCase(request.getCategoryName())){
+            throw new CategoryAlreadyExistsException(request.getCategoryName());
         }
-        return categoryRepository.save(category);
+        Category category=CategoryMapper.create(request);
+        Category saved=categoryRepository.save(category);
+
+        return CategoryMapper.response(saved);
     }
 
     //DELETE CATEGORY
@@ -56,19 +74,23 @@ public class CategoryService {
     }
 
     //UPDATE CATEGORY
-    public Category updateCategory(Integer categoryId,Category updated){
-        Category existing=getCategoryById(categoryId);
+    public CategoryResponse updateCategory(Integer categoryId, CategoryUpdateRequest request){
+        return categoryRepository.findById(categoryId)
+                .map(existing->{
+                    if(request.getCategoryName()!=null){
+                        if(!request.getCategoryName().equalsIgnoreCase(existing.getCategoryName()) &&
+                                categoryRepository.existsByCategoryNameIgnoreCase(request.getCategoryName())){
+                            throw new CategoryAlreadyExistsException(request.getCategoryName());
+                        }
+                        existing.setCategoryName(request.getCategoryName());
+                    }
+                    if(request.getActive()!=null){
+                        existing.setActive(request.getActive());
+                    }
+                    Category updated=categoryRepository.save(existing);
 
-        if(updated.getCategoryName()!=null){
-            if(!updated.getCategoryName().equalsIgnoreCase(existing.getCategoryName()) &&
-                    categoryRepository.existsByCategoryNameIgnoreCase(updated.getCategoryName())){
-                throw new CategoryAlreadyExistsException(updated.getCategoryName());
-            }
-            existing.setCategoryName(updated.getCategoryName());
-        }
-        if(updated.getActive()!=null){
-            existing.setActive(updated.getActive());
-        }
-        return categoryRepository.save(existing);
+                    return CategoryMapper.response(updated);
+                })
+                .orElseThrow(()->new CategoryNotFoundException(categoryId));
     }
 }

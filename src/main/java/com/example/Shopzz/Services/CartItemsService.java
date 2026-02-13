@@ -2,6 +2,8 @@ package com.example.Shopzz.Services;
 
 import com.example.Shopzz.CustomExceptions.CartAndCartItems.*;
 import com.example.Shopzz.CustomExceptions.Products.ProductNotFoundException;
+import com.example.Shopzz.DTO.Mapper.CartMapper;
+import com.example.Shopzz.DTO.Response.CartResponse;
 import com.example.Shopzz.Entities.Cart;
 import com.example.Shopzz.Entities.CartItems;
 import com.example.Shopzz.Entities.Product;
@@ -28,7 +30,7 @@ public class CartItemsService {
 
     //ADD CART ITEMS TO CART
     @Transactional
-    public Cart addItemToCart(Integer cartId,Integer productId) {
+    public CartResponse addItemToCart(Integer cartId, Integer productId) {
 
         Cart cart=cartRepository.findById(cartId)
                 .orElseThrow(()->new CartNotFoundException(cartId));
@@ -48,6 +50,7 @@ public class CartItemsService {
                 throw new QuantityException(product.getStock());
             }
             cartItem.setQuantity(newQty);
+            cartItemsRepository.save(cartItem);
 
         }else {
             if (product.getStock() < 1)
@@ -57,16 +60,19 @@ public class CartItemsService {
             cartItem.setProduct(product);
             cartItem.setQuantity(1);
             cartItem.setPriceAtAddTime(product.getPrice());
+            cartItem.setCart(cart);
 
             cart.addItem(cartItem);
         }
 
-        return cartRepository.findCartWithItemsByCartId(cartId)
+        Cart saved=cartRepository.findCartWithItemsByCartId(cartId)
                 .orElseThrow(()->new CartNotFoundException(cartId));
+
+        return CartMapper.response(saved);
     }
 
     @Transactional
-    public Cart increaseQuantity(Integer cartId,Integer productId){
+    public CartResponse increaseQuantity(Integer cartId,Integer productId){
 
         CartItems item=cartItemsRepository
                 .findByCart_CartIdAndProduct_ProductId(cartId,productId)
@@ -80,12 +86,14 @@ public class CartItemsService {
         }
         item.setQuantity(newQty);
 
-        return cartRepository.findCartWithItemsByCartId(cartId)
+        Cart cart=cartRepository.findCartWithItemsByCartId(cartId)
                 .orElseThrow(()->new CartNotFoundException(cartId));
+
+        return CartMapper.response(cart);
     }
 
     @Transactional
-    public Cart decreaseQuantity(Integer cartId,Integer productId){
+    public CartResponse decreaseQuantity(Integer cartId,Integer productId){
 
         CartItems item=cartItemsRepository
                 .findByCart_CartIdAndProduct_ProductId(cartId,productId)
@@ -99,13 +107,15 @@ public class CartItemsService {
         }else{
             item.setQuantity(newQty);
         }
-        return cartRepository.findCartWithItemsByCartId(cartId)
+        Cart cart=cartRepository.findCartWithItemsByCartId(cartId)
                 .orElseThrow(()->new CartNotFoundException(cartId));
+
+        return CartMapper.response(cart);
     }
 
     //REMOVE ITEMS FROM CART
     @Transactional
-    public Cart removeItemFromCart(Integer cartId, Integer productId) {
+    public CartResponse removeItemFromCart(Integer cartId, Integer productId) {
 
         //CHECK CART ID
         Cart cart = cartRepository.findById(cartId)
@@ -117,8 +127,10 @@ public class CartItemsService {
 
         cart.removeItem(items);
 
-        return cartRepository.findCartWithItemsByCartId(cartId)
+        Cart saved=cartRepository.findCartWithItemsByCartId(cartId)
                 .orElseThrow(()->new CartNotFoundException(cartId));
+
+        return CartMapper.response(cart);
     }
 
     //CLEAR CART
